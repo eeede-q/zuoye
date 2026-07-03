@@ -1,1 +1,1 @@
-web: python web_inventory/app.py
+web: python app.py
