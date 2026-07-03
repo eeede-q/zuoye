@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品出库管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: "Microsoft YaHei", "微软雅黑", sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        }
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        .nav-link {
+            color: rgba(255,255,255,0.85) !important;
+            transition: color 0.3s;
+            cursor: pointer;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #fff !important;
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 6px;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border-radius: 10px;
+        }
+        .card-header {
+            background-color: #fff;
+            border-bottom: 2px solid #f0f0f0;
+            font-weight: 600;
+            border-radius: 10px 10px 0 0 !important;
+        }
+        .btn-primary { background-color: #3498db; border-color: #3498db; }
+        .btn-primary:hover { background-color: #2980b9; border-color: #2980b9; }
+        .btn-success { background-color: #27ae60; border-color: #27ae60; }
+        .btn-warning { background-color: #f39c12; border-color: #f39c12; color: #fff; }
+        .btn-danger { background-color: #e74c3c; border-color: #e74c3c; }
+        .table thead th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .table-hover tbody tr:hover { background-color: #f1f8ff; }
+        .stat-card {
+            border-radius: 10px;
+            border: none;
+            color: #fff;
+            padding: 15px;
+        }
+        .stat-card .stat-number { font-size: 1.8rem; font-weight: bold; }
+        .stat-card .stat-label { font-size: 0.9rem; opacity: 0.9; }
+        .form-label { font-weight: 500; color: #2c3e50; }
+        .text-muted-small { font-size: 0.8rem; color: #6c757d; }
+        .page-section { display: none; }
+        .page-section.active { display: block; }
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+    </style>
+</head>
+<body>
+    <!-- 消息提示容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- 顶部导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="javascript:void(0)" onclick="showPage('products')">
+                <i class="bi bi-box-seam me-2"></i>商品出库管理系统
+            </a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link px-3 active" id="nav-products" onclick="showPage('products')">
+                            <i class="bi bi-bag-plus me-1"></i>商品管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" id="nav-outbound" onclick="showPage('outbound')">
+                            <i class="bi bi-cart-dash me-1"></i>出库操作
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" id="nav-query" onclick="showPage('query')">
+                            <i class="bi bi-search me-1"></i>数据查询
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #3498db, #2980b9);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-label">商品总数</div>
+                            <div class="stat-number" id="statProductCount">0</div>
+                        </div>
+                        <i class="bi bi-box2" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-label">出库单总数</div>
+                            <div class="stat-number" id="statOrderCount">0</div>
+                        </div>
+                        <i class="bi bi-receipt" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #27ae60, #229954);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-label">库存总价值</div>
+                            <div class="stat-number" style="font-size: 1.4rem;" id="statStockValue">¥0.00</div>
+                        </div>
+                        <i class="bi bi-currency-yen" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-label">出库总金额</div>
+                            <div class="stat-number" style="font-size: 1.4rem;" id="statOutboundAmount">¥0.00</div>
+                        </div>
+                        <i class="bi bi-graph-up" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 页面1：商品管理 ==================== -->
+        <div class="page-section active" id="page-products">
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-list-ul me-2"></i>商品列表</span>
+                            <div class="d-flex">
+                                <input type="text" class="form-control form-control-sm me-2" 
+                                       id="productSearch" placeholder="搜索编号/名称/分类" 
+                                       style="width: 200px;" oninput="renderProductList()">
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0 align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-center">编号</th>
+                                            <th>商品名称</th>
+                                            <th>规格</th>
+                                            <th class="text-center">库存</th>
+                                            <th class="text-end">单价</th>
+                                            <th class="text-center">分类</th>
+                                            <th class="text-center">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="productTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header" id="productFormTitle">
+                            <i class="bi bi-plus-circle me-2"></i>新增商品
+                        </div>
+                        <div class="card-body">
+                            <form id="productForm" onsubmit="return saveProduct(event)">
+                                <input type="hidden" id="originalId">
+                                <div class="mb-3">
+                                    <label class="form-label">商品编号 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="productId" placeholder="如：P001" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">商品名称 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="productName" placeholder="如：笔记本电脑" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">规格</label>
+                                    <input type="text" class="form-control" id="productSpec" placeholder="如：14寸/8G/256G">
+                                </div>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-6">
+                                        <label class="form-label">库存数量</label>
+                                        <input type="number" class="form-control" id="productStock" value="0" min="0">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label">单价(元)</label>
+                                        <input type="number" class="form-control" id="productPrice" value="0" min="0" step="0.01">
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label">分类</label>
+                                    <input type="text" class="form-control" id="productCategory" placeholder="如：电子设备">
+                                    <div class="form-text text-muted-small">可自定义分类名称</div>
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary" id="productSubmitBtn">
+                                        <i class="bi bi-plus-lg me-1"></i>新增商品
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="resetProductForm()">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i>重置表单
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 页面2：出库操作 ==================== -->
+        <div class="page-section" id="page-outbound">
+            <div class="card mb-4">
+                <div class="card-header"><i class="bi bi-cart-dash me-2"></i>新建出库单</div>
+                <div class="card-body">
+                    <form id="outboundForm" onsubmit="return submitOutbound(event)">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label">出库单号</label>
+                                <div class="form-control bg-light text-muted" id="outboundOrderNo">
+                                    <i class="bi bi-receipt me-1"></i>自动生成
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">出库日期</label>
+                                <input type="date" class="form-control" id="outboundDate">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">选择商品 <span class="text-danger">*</span></label>
+                                <select class="form-select" id="outboundProduct" required onchange="updateStockInfo()">
+                                    <option value="">-- 请选择商品 --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-3">
+                                <label class="form-label">当前库存</label>
+                                <div class="form-control bg-light">
+                                    <span id="currentStock" class="text-primary fw-bold">--</span>
+                                    <span class="text-muted"> 件</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">出库数量 <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="outboundQuantity" 
+                                       min="1" value="1" placeholder="请输入出库数量" required oninput="calculateOutboundTotal()">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">领用人员 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="outboundReceiver" placeholder="请输入领用人姓名" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">出库总金额</label>
+                                <div class="form-control bg-light text-success fw-bold">
+                                    ¥ <span id="outboundTotalAmount">0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-9">
+                                <label class="form-label">出库备注</label>
+                                <input type="text" class="form-control" id="outboundRemark" placeholder="选填，如：部门领用、活动使用等">
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-danger w-100">
+                                    <i class="bi bi-check-circle me-1"></i>提交出库
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-clock-history me-2"></i>最近出库记录（最新10条）</span>
+                    <a href="javascript:void(0)" class="btn btn-sm btn-outline-primary" onclick="showPage('query'); setQueryView('outbound')">
+                        查看全部 <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead>
+                                <tr>
+                                    <th class="text-center">出库单号</th>
+                                    <th class="text-center">出库日期</th>
+                                    <th class="text-center">商品编号</th>
+                                    <th>商品名称</th>
+                                    <th class="text-center">出库数量</th>
+                                    <th class="text-center">领用人员</th>
+                                    <th>备注</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentOutboundBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 页面3：数据查询 ==================== -->
+        <div class="page-section" id="page-query">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-4">
+                            <div class="btn-group w-100">
+                                <button class="btn btn-outline-primary active" id="queryViewProducts" onclick="setQueryView('products')">
+                                    <i class="bi bi-box2 me-1"></i>商品库存查询
+                                </button>
+                                <button class="btn btn-outline-primary" id="queryViewOutbound" onclick="setQueryView('outbound')">
+                                    <i class="bi bi-receipt me-1"></i>出库记录查询
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="queryKeyword" 
+                                       placeholder="搜索编号/名称/分类" oninput="renderQueryResults()">
+                                <button class="btn btn-primary" type="button">
+                                    <i class="bi bi-search me-1"></i>搜索
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <span class="text-primary fw-bold" id="queryResultCount">共 0 条</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 商品库存查询 -->
+            <div class="card" id="queryProductsCard">
+                <div class="card-header"><i class="bi bi-box-seam me-2"></i>商品库存明细</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead>
+                                <tr>
+                                    <th class="text-center">商品编号</th>
+                                    <th>商品名称</th>
+                                    <th>规格</th>
+                                    <th class="text-center">库存数量</th>
+                                    <th class="text-end">单价(元)</th>
+                                    <th class="text-center">分类</th>
+                                    <th class="text-end">库存总价值(元)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="queryProductBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- 出库记录查询 -->
+            <div class="card" id="queryOutboundCard" style="display:none;">
+                <div class="card-header"><i class="bi bi-receipt me-2"></i>出库记录明细</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead>
+                                <tr>
+                                    <th class="text-center">出库单号</th>
+                                    <th class="text-center">出库日期</th>
+                                    <th class="text-center">商品编号</th>
+                                    <th>商品名称</th>
+                                    <th class="text-center">出库数量</th>
+                                    <th class="text-end">单价(元)</th>
+                                    <th class="text-end">出库金额(元)</th>
+                                    <th class="text-center">领用人员</th>
+                                    <th>备注</th>
+                                    <th class="text-center">创建时间</th>
+                                </tr>
+                            </thead>
+                            <tbody id="queryOutboundBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <footer class="text-center text-muted mt-5 mb-3">
+            <p class="text-muted-small mb-0">
+                <i class="bi bi-info-circle me-1"></i>
+                数据仅存储于浏览器内存中，关闭网页后数据自动清空
+            </p>
+        </footer>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-warning me-2"></i>确认删除</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    确定要删除商品 "<strong id="deleteProductName"></strong>" 吗？此操作不可撤销。
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+                        <i class="bi bi-trash me-1"></i>确认删除
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // ===================== 内存数据存储 =====================
+    let products = {};       // 商品字典：key=商品编号
+    let outboundOrders = []; // 出库记录列表
+    let orderCounter = 1;    // 出库单自增序号
+    let deleteProductId = null; // 当前要删除的商品ID
+    let currentQueryView = 'products'; // 当前查询视图
+
+    // ===================== 初始化示例数据 =====================
+    function initSampleData() {
+        const sample = [
+            {product_id: "P001", name: "笔记本电脑", spec: "14寸/8G/256G", stock: 50, price: 4500.00, category: "电子设备"},
+            {product_id: "P002", name: "无线鼠标", spec: "蓝牙/静音", stock: 200, price: 89.00, category: "电子设备"},
+            {product_id: "P003", name: "A4打印纸", spec: "70g/500张", stock: 500, price: 25.00, category: "办公用品"},
+            {product_id: "P004", name: "签字笔", spec: "0.5mm/黑色", stock: 1000, price: 2.50, category: "办公用品"},
+            {product_id: "P005", name: "办公椅", spec: "人体工学/黑色", stock: 30, price: 350.00, category: "办公家具"},
+        ];
+        sample.forEach(p => { products[p.product_id] = p; });
+    }
+    initSampleData();
+
+    // ===================== 工具函数 =====================
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast show align-items-center text-white bg-${type === 'error' ? 'danger' : 'success'} border-0`;
+        toast.style.marginBottom = '10px';
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-${type === 'error' ? 'exclamation-circle' : 'check-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.closest('.toast').remove()"></button>
+            </div>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    function formatMoney(num) {
+        return '¥' + parseFloat(num || 0).toFixed(2);
+    }
+
+    function getTodayStr() {
+        const d = new Date();
+        return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+
+    function generateOrderId() {
+        const d = new Date();
+        const dateStr = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+        return 'OUT' + dateStr + String(orderCounter++).padStart(4, '0');
+    }
+
+    function getStatistics() {
+        let totalStockValue = 0;
+        let totalOutboundAmount = 0;
+        Object.values(products).forEach(p => {
+            totalStockValue += p.stock * p.price;
+        });
+        outboundOrders.forEach(o => {
+            if (products[o.product_id]) {
+                totalOutboundAmount += o.quantity * products[o.product_id].price;
+            }
+        });
+        return {
+            productCount: Object.keys(products).length,
+            orderCount: outboundOrders.length,
+            totalStockValue: totalStockValue,
+            totalOutboundAmount: totalOutboundAmount
+        };
+    }
+
+    function updateStatistics() {
+        const s = getStatistics();
+        document.getElementById('statProductCount').textContent = s.productCount;
+        document.getElementById('statOrderCount').textContent = s.orderCount;
+        document.getElementById('statStockValue').textContent = formatMoney(s.totalStockValue);
+        document.getElementById('statOutboundAmount').textContent = formatMoney(s.totalOutboundAmount);
+    }
+
+    // ===================== 页面切换 =====================
+    function showPage(page) {
+        document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+        document.getElementById('page-' + page).classList.add('active');
+        document.querySelectorAll('.navbar-nav .nav-link').forEach(el => el.classList.remove('active'));
+        document.getElementById('nav-' + page).classList.add('active');
+
+        if (page === 'outbound') {
+            refreshOutboundProductSelect();
+            renderRecentOutbound();
+            document.getElementById('outboundDate').value = getTodayStr();
+        }
+        if (page === 'query') {
+            renderQueryResults();
+        }
+    }
+
+    // ===================== 商品管理 =====================
+    function renderProductList() {
+        const keyword = document.getElementById('productSearch').value.trim().toLowerCase();
+        const tbody = document.getElementById('productTableBody');
+        tbody.innerHTML = '';
+
+        const list = Object.values(products).filter(p => {
+            if (!keyword) return true;
+            return p.product_id.toLowerCase().includes(keyword)
+                || p.name.toLowerCase().includes(keyword)
+                || p.category.toLowerCase().includes(keyword);
+        });
+
+        if (list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-5">
+                <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                ${keyword ? '没有找到匹配的商品' : '暂无商品数据，请先添加商品'}
+            </td></tr>`;
+            updateStatistics();
+            return;
+        }
+
+        list.forEach(p => {
+            let stockBadge = 'success';
+            if (p.stock <= 10) stockBadge = 'danger';
+            else if (p.stock <= 50) stockBadge = 'warning text-dark';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-center"><span class="badge bg-secondary">${p.product_id}</span></td>
+                <td><strong>${p.name}</strong></td>
+                <td class="text-muted">${p.spec || '-'}</td>
+                <td class="text-center"><span class="badge bg-${stockBadge}">${p.stock}</span></td>
+                <td class="text-end">${formatMoney(p.price)}</td>
+                <td class="text-center"><span class="badge bg-info">${p.category || '未分类'}</span></td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editProduct('${p.product_id}')">
+                        <i class="bi bi-pencil"></i> 编辑
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${p.product_id}')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        updateStatistics();
+    }
+
+    function saveProduct(e) {
+        e.preventDefault();
+        const originalId = document.getElementById('originalId').value;
+        const product_id = document.getElementById('productId').value.trim();
+        const name = document.getElementById('productName').value.trim();
+        const spec = document.getElementById('productSpec').value.trim();
+        const category = document.getElementById('productCategory').value.trim();
+        const stock = parseInt(document.getElementById('productStock').value) || 0;
+        const price = parseFloat(document.getElementById('productPrice').value) || 0;
+
+        if (!product_id || !name) {
+            showToast('商品编号和名称不能为空！', 'error');
+            return false;
+        }
+        if (stock < 0) {
+            showToast('库存数量不能为负数！', 'error');
+            return false;
+        }
+        if (price < 0) {
+            showToast('单价不能为负数！', 'error');
+            return false;
+        }
+
+        // 新增模式
+        if (!originalId) {
+            if (products[product_id]) {
+                showToast('商品编号已存在！', 'error');
+                return false;
+            }
+            products[product_id] = {product_id, name, spec, stock, price, category};
+            showToast(`商品 "${name}" 添加成功！`);
+        }
+        // 编辑模式
+        else {
+            if (product_id !== originalId && products[product_id]) {
+                showToast('商品编号已存在！', 'error');
+                return false;
+            }
+            if (product_id !== originalId) {
+                delete products[originalId];
+            }
+            products[product_id] = {product_id, name, spec, stock, price, category};
+            showToast(`商品 "${name}" 修改成功！`);
+        }
+
+        resetProductForm();
+        renderProductList();
+        return false;
+    }
+
+    function editProduct(productId) {
+        const p = products[productId];
+        if (!p) return;
+        document.getElementById('originalId').value = p.product_id;
+        document.getElementById('productId').value = p.product_id;
+        document.getElementById('productName').value = p.name;
+        document.getElementById('productSpec').value = p.spec || '';
+        document.getElementById('productStock').value = p.stock;
+        document.getElementById('productPrice').value = p.price;
+        document.getElementById('productCategory').value = p.category || '';
+
+        document.getElementById('productFormTitle').innerHTML = '<i class="bi bi-pencil me-2"></i>修改商品';
+        document.getElementById('productSubmitBtn').innerHTML = '<i class="bi bi-check-lg me-1"></i>保存修改';
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function deleteProduct(productId) {
+        const p = products[productId];
+        if (!p) return;
+        deleteProductId = productId;
+        document.getElementById('deleteProductName').textContent = p.name;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+
+    function confirmDelete() {
+        if (!deleteProductId) return;
+        const p = products[deleteProductId];
+        delete products[deleteProductId];
+        deleteProductId = null;
+        bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+        showToast(`商品 "${p.name}" 删除成功！`);
+        renderProductList();
+        resetProductForm();
+    }
+
+    function resetProductForm() {
+        document.getElementById('productForm').reset();
+        document.getElementById('originalId').value = '';
+        document.getElementById('productStock').value = '0';
+        document.getElementById('productPrice').value = '0';
+        document.getElementById('productFormTitle').innerHTML = '<i class="bi bi-plus-circle me-2"></i>新增商品';
+        document.getElementById('productSubmitBtn').innerHTML = '<i class="bi bi-plus-lg me-1"></i>新增商品';
+    }
+
+    // ===================== 出库操作 =====================
+    function refreshOutboundProductSelect() {
+        const select = document.getElementById('outboundProduct');
+        select.innerHTML = '<option value="">-- 请选择商品 --</option>';
+        Object.values(products).forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.product_id;
+            opt.textContent = `${p.product_id} - ${p.name} (${p.spec})  库存:${p.stock}`;
+            opt.dataset.stock = p.stock;
+            opt.dataset.price = p.price;
+            select.appendChild(opt);
+        });
+        document.getElementById('currentStock').textContent = '--';
+        document.getElementById('outboundTotalAmount').textContent = '0.00';
+    }
+
+    function updateStockInfo() {
+        const select = document.getElementById('outboundProduct');
+        const opt = select.options[select.selectedIndex];
+        if (opt && opt.value) {
+            document.getElementById('currentStock').textContent = opt.dataset.stock || 0;
+        } else {
+            document.getElementById('currentStock').textContent = '--';
+        }
+        calculateOutboundTotal();
+    }
+
+    function calculateOutboundTotal() {
+        const select = document.getElementById('outboundProduct');
+        const opt = select.options[select.selectedIndex];
+        const price = opt ? parseFloat(opt.dataset.price || 0) : 0;
+        const qty = parseInt(document.getElementById('outboundQuantity').value) || 0;
+        document.getElementById('outboundTotalAmount').textContent = (price * qty).toFixed(2);
+    }
+
+    function submitOutbound(e) {
+        e.preventDefault();
+        const productId = document.getElementById('outboundProduct').value;
+        const quantity = parseInt(document.getElementById('outboundQuantity').value) || 0;
+        const receiver = document.getElementById('outboundReceiver').value.trim();
+        const outDate = document.getElementById('outboundDate').value || getTodayStr();
+        const remark = document.getElementById('outboundRemark').value.trim();
+
+        if (!productId) {
+            showToast('请选择商品！', 'error');
+            return false;
+        }
+        const product = products[productId];
+        if (!product) {
+            showToast('商品不存在！', 'error');
+            return false;
+        }
+        if (quantity <= 0) {
+            showToast('出库数量必须大于0！', 'error');
+            return false;
+        }
+        if (quantity > product.stock) {
+            showToast(`库存不足！当前库存 ${product.stock} 件，无法出库 ${quantity} 件。`, 'error');
+            return false;
+        }
+        if (!receiver) {
+            showToast('请填写领用人员！', 'error');
+            return false;
+        }
+        if (!confirm(`确认出库信息：\n\n商品：${product.name}\n数量：${quantity} 件\n领用人：${receiver}\n\n确认提交吗？`)) {
+            return false;
+        }
+
+        // 扣减库存
+        product.stock -= quantity;
+
+        // 记录出库单
+        const order = {
+            order_id: generateOrderId(),
+            product_id: productId,
+            product_name: product.name,
+            quantity: quantity,
+            out_date: outDate,
+            receiver: receiver,
+            remark: remark,
+            create_time: new Date().toLocaleString('zh-CN')
+        };
+        outboundOrders.unshift(order);
+
+        showToast(`出库成功！已扣减库存 ${quantity} 件`);
+        document.getElementById('outboundForm').reset();
+        document.getElementById('outboundDate').value = getTodayStr();
+        document.getElementById('outboundQuantity').value = '1';
+        refreshOutboundProductSelect();
+        renderRecentOutbound();
+        renderProductList();
+        return false;
+    }
+
+    function renderRecentOutbound() {
+        const tbody = document.getElementById('recentOutboundBody');
+        const list = outboundOrders.slice(0, 10);
+        tbody.innerHTML = '';
+
+        if (list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-5">
+                <i class="bi bi-inbox display-4 d-block mb-2"></i>暂无出库记录
+            </td></tr>`;
+            return;
+        }
+
+        list.forEach(o => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-center"><span class="badge bg-secondary">${o.order_id}</span></td>
+                <td class="text-center text-muted">${o.out_date}</td>
+                <td class="text-center"><span class="badge bg-light text-dark">${o.product_id}</span></td>
+                <td><strong>${o.product_name}</strong></td>
+                <td class="text-center"><span class="badge bg-danger">-${o.quantity}</span></td>
+                <td class="text-center">${o.receiver}</td>
+                <td class="text-muted">${o.remark || '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ===================== 数据查询 =====================
+    function setQueryView(view) {
+        currentQueryView = view;
+        document.getElementById('queryViewProducts').classList.toggle('active', view === 'products');
+        document.getElementById('queryViewOutbound').classList.toggle('active', view === 'outbound');
+        document.getElementById('queryProductsCard').style.display = view === 'products' ? '' : 'none';
+        document.getElementById('queryOutboundCard').style.display = view === 'outbound' ? '' : 'none';
+
+        const input = document.getElementById('queryKeyword');
+        input.placeholder = view === 'products' ? '搜索编号/名称/分类' : '搜索单号/商品名/领用人';
+        renderQueryResults();
+    }
+
+    function renderQueryResults() {
+        const keyword = document.getElementById('queryKeyword').value.trim().toLowerCase();
+
+        if (currentQueryView === 'products') {
+            const tbody = document.getElementById('queryProductBody');
+            const list = Object.values(products).filter(p => {
+                if (!keyword) return true;
+                return p.product_id.toLowerCase().includes(keyword)
+                    || p.name.toLowerCase().includes(keyword)
+                    || p.category.toLowerCase().includes(keyword);
+            });
+            tbody.innerHTML = '';
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-5">
+                    <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                    ${keyword ? '没有找到匹配的商品' : '暂无商品数据'}
+                </td></tr>`;
+            } else {
+                list.forEach(p => {
+                    let stockBadge = 'success';
+                    if (p.stock <= 10) stockBadge = 'danger';
+                    else if (p.stock <= 50) stockBadge = 'warning text-dark';
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="text-center"><span class="badge bg-secondary">${p.product_id}</span></td>
+                        <td><strong>${p.name}</strong></td>
+                        <td class="text-muted">${p.spec || '-'}</td>
+                        <td class="text-center"><span class="badge bg-${stockBadge}">${p.stock}</span></td>
+                        <td class="text-end">${formatMoney(p.price)}</td>
+                        <td class="text-center"><span class="badge bg-info">${p.category || '未分类'}</span></td>
+                        <td class="text-end fw-bold text-primary">${formatMoney(p.stock * p.price)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            document.getElementById('queryResultCount').textContent = `共 ${list.length} 种商品`;
+        } else {
+            const tbody = document.getElementById('queryOutboundBody');
+            const list = outboundOrders.filter(o => {
+                if (!keyword) return true;
+                return o.order_id.toLowerCase().includes(keyword)
+                    || o.product_name.toLowerCase().includes(keyword)
+                    || o.receiver.toLowerCase().includes(keyword);
+            });
+            tbody.innerHTML = '';
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-5">
+                    <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                    ${keyword ? '没有找到匹配的记录' : '暂无出库记录'}
+                </td></tr>`;
+            } else {
+                list.forEach(o => {
+                    const unitPrice = products[o.product_id] ? products[o.product_id].price : 0;
+                    const totalPrice = unitPrice * o.quantity;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="text-center"><span class="badge bg-secondary">${o.order_id}</span></td>
+                        <td class="text-center text-muted">${o.out_date}</td>
+                        <td class="text-center"><span class="badge bg-light text-dark">${o.product_id}</span></td>
+                        <td><strong>${o.product_name}</strong></td>
+                        <td class="text-center"><span class="badge bg-danger">-${o.quantity}</span></td>
+                        <td class="text-end">${formatMoney(unitPrice)}</td>
+                        <td class="text-end fw-bold text-danger">${formatMoney(totalPrice)}</td>
+                        <td class="text-center">${o.receiver}</td>
+                        <td class="text-muted small">${o.remark || '-'}</td>
+                        <td class="text-center text-muted small">${o.create_time}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            document.getElementById('queryResultCount').textContent = `共 ${list.length} 条记录`;
+        }
+    }
+
+    // ===================== 页面初始化 =====================
+    document.addEventListener('DOMContentLoaded', function() {
+        renderProductList();
+        updateStatistics();
+        document.getElementById('outboundDate').value = getTodayStr();
+    });
+    </script>
+</body>
+</html>

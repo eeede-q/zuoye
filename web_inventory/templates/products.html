@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}商品管理 - 商品出库管理系统{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- 左侧：商品列表 -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-list-ul me-2"></i>商品列表</span>
+                <form class="d-flex" method="get" action="{{ url_for('product_manage') }}">
+                    <input type="text" class="form-control form-control-sm me-2" 
+                           name="keyword" placeholder="搜索编号/名称/分类" 
+                           value="{{ keyword }}" style="width: 200px;">
+                    <button class="btn btn-outline-primary btn-sm" type="submit">
+                        <i class="bi bi-search"></i>
+                    </button>
+                    {% if keyword %}
+                    <a href="{{ url_for('product_manage') }}" class="btn btn-outline-secondary btn-sm ms-2">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                    {% endif %}
+                </form>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th class="text-center">编号</th>
+                                <th>商品名称</th>
+                                <th>规格</th>
+                                <th class="text-center">库存</th>
+                                <th class="text-end">单价</th>
+                                <th class="text-center">分类</th>
+                                <th class="text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in products %}
+                            <tr>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary">{{ p.product_id }}</span>
+                                </td>
+                                <td><strong>{{ p.name }}</strong></td>
+                                <td class="text-muted">{{ p.spec or '-' }}</td>
+                                <td class="text-center">
+                                    {% if p.stock <= 10 %}
+                                        <span class="badge bg-danger badge-stock">{{ p.stock }}</span>
+                                    {% elif p.stock <= 50 %}
+                                        <span class="badge bg-warning badge-stock">{{ p.stock }}</span>
+                                    {% else %}
+                                        <span class="badge bg-success badge-stock">{{ p.stock }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">¥{{ "%.2f"|format(p.price) }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-info">{{ p.category or '未分类' }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            onclick="editProduct('{{ p.product_id }}')">
+                                        <i class="bi bi-pencil"></i> 编辑
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="deleteProduct('{{ p.product_id }}', '{{ p.name }}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-5">
+                                    <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                                    {% if keyword %}
+                                        没有找到匹配的商品
+                                    {% else %}
+                                        暂无商品数据，请先添加商品
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧：操作表单 -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header" id="formTitle">
+                <i class="bi bi-plus-circle me-2"></i>新增商品
+            </div>
+            <div class="card-body">
+                <form id="productForm" method="post" action="{{ url_for('product_add') }}">
+                    <input type="hidden" name="original_id" id="original_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">商品编号 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="product_id" id="product_id" 
+                               placeholder="如：P001" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">商品名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="name" id="name" 
+                               placeholder="如：笔记本电脑" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">规格</label>
+                        <input type="text" class="form-control" name="spec" id="spec" 
+                               placeholder="如：14寸/8G/256G">
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">库存数量</label>
+                            <input type="number" class="form-control" name="stock" id="stock" 
+                                   value="0" min="0">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">单价(元)</label>
+                            <input type="number" class="form-control" name="price" id="price" 
+                                   value="0" min="0" step="0.01">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">分类</label>
+                        <input type="text" class="form-control" name="category" id="category" 
+                               placeholder="如：电子设备">
+                        <div class="form-text text-muted-small">可自定义分类名称</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="bi bi-plus-lg me-1"></i>新增商品
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>重置表单
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-warning me-2"></i>确认删除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                确定要删除商品 "<strong id="deleteProductName"></strong>" 吗？此操作不可撤销。
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <a href="#" class="btn btn-danger" id="deleteConfirmBtn">
+                    <i class="bi bi-trash me-1"></i>确认删除
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 编辑商品
+    function editProduct(productId) {
+        fetch(`/api/products/${productId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                document.getElementById('original_id').value = data.product_id;
+                document.getElementById('product_id').value = data.product_id;
+                document.getElementById('name').value = data.name;
+                document.getElementById('spec').value = data.spec || '';
+                document.getElementById('stock').value = data.stock;
+                document.getElementById('price').value = data.price;
+                document.getElementById('category').value = data.category || '';
+                
+                document.getElementById('formTitle').innerHTML = '<i class="bi bi-pencil me-2"></i>修改商品';
+                document.getElementById('submitBtn').innerHTML = '<i class="bi bi-check-lg me-1"></i>保存修改';
+                document.getElementById('productForm').action = '/products/update';
+                
+                document.getElementById('product_id').focus();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+    }
+
+    // 删除商品
+    function deleteProduct(productId, productName) {
+        document.getElementById('deleteProductName').textContent = productName;
+        document.getElementById('deleteConfirmBtn').href = `/products/delete/${productId}`;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+
+    // 重置表单
+    function resetForm() {
+        document.getElementById('productForm').reset();
+        document.getElementById('original_id').value = '';
+        document.getElementById('product_id').value = '';
+        document.getElementById('formTitle').innerHTML = '<i class="bi bi-plus-circle me-2"></i>新增商品';
+        document.getElementById('submitBtn').innerHTML = '<i class="bi bi-plus-lg me-1"></i>新增商品';
+        document.getElementById('productForm').action = '/products/add';
+    }
+</script>
+{% endblock %}

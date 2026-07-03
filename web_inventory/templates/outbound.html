@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}出库操作 - 商品出库管理系统{% endblock %}
+
+{% block content %}
+<!-- 出库单表单 -->
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="bi bi-cart-dash me-2"></i>新建出库单
+    </div>
+    <div class="card-body">
+        <form method="post" action="{{ url_for('outbound_manage') }}" id="outboundForm">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">出库单号</label>
+                    <div class="form-control bg-light text-muted">
+                        <i class="bi bi-receipt me-1"></i>自动生成
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">出库日期</label>
+                    <input type="date" class="form-control" name="out_date" id="outDate">
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label">选择商品 <span class="text-danger">*</span></label>
+                    <select class="form-select" name="product_id" id="productSelect" required onchange="updateStockInfo()">
+                        <option value="">-- 请选择商品 --</option>
+                        {% for p in products %}
+                        <option value="{{ p.product_id }}" data-stock="{{ p.stock }}" data-price="{{ p.price }}">
+                            {{ p.product_id }} - {{ p.name }} ({{ p.spec }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row g-3 mt-2">
+                <div class="col-md-3">
+                    <label class="form-label">当前库存</label>
+                    <div class="form-control bg-light">
+                        <span id="currentStock" class="text-primary fw-bold">--</span>
+                        <span class="text-muted"> 件</span>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">出库数量 <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" name="quantity" id="quantity" 
+                           min="1" value="1" placeholder="请输入出库数量" required oninput="calculateTotal()">
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">领用人员 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="receiver" 
+                           placeholder="请输入领用人姓名" required>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">出库总金额</label>
+                    <div class="form-control bg-light text-success fw-bold">
+                        ¥ <span id="totalAmount">0.00</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row g-3 mt-2">
+                <div class="col-md-9">
+                    <label class="form-label">出库备注</label>
+                    <input type="text" class="form-control" name="remark" placeholder="选填，如：部门领用、活动使用等">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-danger w-100" onclick="return confirmOutbound()">
+                        <i class="bi bi-check-circle me-1"></i>提交出库
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 最近出库记录 -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history me-2"></i>最近出库记录（最新10条）</span>
+        <a href="{{ url_for('query_page', view='outbound') }}" class="btn btn-sm btn-outline-primary">
+            查看全部 <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th class="text-center">出库单号</th>
+                        <th class="text-center">出库日期</th>
+                        <th class="text-center">商品编号</th>
+                        <th>商品名称</th>
+                        <th class="text-center">出库数量</th>
+                        <th class="text-center">领用人员</th>
+                        <th>备注</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr>
+                        <td class="text-center">
+                            <span class="badge bg-secondary">{{ order.order_id }}</span>
+                        </td>
+                        <td class="text-center text-muted">{{ order.out_date }}</td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-dark">{{ order.product_id }}</span>
+                        </td>
+                        <td><strong>{{ order.product_name }}</strong></td>
+                        <td class="text-center">
+                            <span class="badge bg-danger">-{{ order.quantity }}</span>
+                        </td>
+                        <td class="text-center">{{ order.receiver }}</td>
+                        <td class="text-muted">{{ order.remark or '-' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                            暂无出库记录
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 获取今天的日期
+    function getToday() {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    // 设置日期默认值
+    document.querySelector('input[name="out_date"]').value = getToday();
+
+    // 更新库存信息
+    function updateStockInfo() {
+        const select = document.getElementById('productSelect');
+        const option = select.options[select.selectedIndex];
+        const stock = option.getAttribute('data-stock');
+        
+        if (stock !== null) {
+            document.getElementById('currentStock').textContent = stock;
+        } else {
+            document.getElementById('currentStock').textContent = '--';
+        }
+        calculateTotal();
+    }
+
+    // 计算总金额
+    function calculateTotal() {
+        const select = document.getElementById('productSelect');
+        const option = select.options[select.selectedIndex];
+        const price = parseFloat(option.getAttribute('data-price') || 0);
+        const quantity = parseInt(document.getElementById('quantity').value || 0);
+        const total = price * quantity;
+        document.getElementById('totalAmount').textContent = total.toFixed(2);
+    }
+
+    // 提交出库前确认
+    function confirmOutbound() {
+        const form = document.getElementById('outboundForm');
+        if (!form.checkValidity()) {
+            return true;
+        }
+        const productName = document.getElementById('productSelect').selectedOptions[0].text;
+        const quantity = document.getElementById('quantity').value;
+        return confirm(`确认出库信息：\n\n商品：${productName}\n数量：${quantity} 件\n\n确认提交吗？`);
+    }
+</script>
+{% endblock %}

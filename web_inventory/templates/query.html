@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}数据查询 - 商品出库管理系统{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-4">
+                <div class="btn-group w-100">
+                    <a href="{{ url_for('query_page', view='products', keyword=keyword) }}" 
+                       class="btn btn-outline-primary {% if view == 'products' %}active{% endif %}">
+                        <i class="bi bi-box2 me-1"></i>商品库存查询
+                    </a>
+                    <a href="{{ url_for('query_page', view='outbound', keyword=keyword) }}" 
+                       class="btn btn-outline-primary {% if view == 'outbound' %}active{% endif %}">
+                        <i class="bi bi-receipt me-1"></i>出库记录查询
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-5">
+                <form method="get" action="{{ url_for('query_page') }}">
+                    <input type="hidden" name="view" value="{{ view }}">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="keyword" 
+                               placeholder="{% if view == 'products' %}搜索编号/名称/分类{% else %}搜索单号/商品名/领用人{% endif %}"
+                               value="{{ keyword }}">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="bi bi-search me-1"></i>搜索
+                        </button>
+                        {% if keyword %}
+                        <a href="{{ url_for('query_page', view=view) }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+            <div class="col-md-3 text-end">
+                <span class="text-primary fw-bold">
+                    {% if view == 'products' %}
+                        共 {{ products|length }} 种商品
+                    {% else %}
+                        共 {{ orders|length }} 条记录
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if view == 'products' %}
+<!-- 商品库存查询 -->
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-box-seam me-2"></i>商品库存明细
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th class="text-center">商品编号</th>
+                        <th>商品名称</th>
+                        <th>规格</th>
+                        <th class="text-center">库存数量</th>
+                        <th class="text-end">单价(元)</th>
+                        <th class="text-center">分类</th>
+                        <th class="text-end">库存总价值(元)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in products %}
+                    <tr>
+                        <td class="text-center">
+                            <span class="badge bg-secondary">{{ p.product_id }}</span>
+                        </td>
+                        <td><strong>{{ p.name }}</strong></td>
+                        <td class="text-muted">{{ p.spec or '-' }}</td>
+                        <td class="text-center">
+                            {% if p.stock <= 10 %}
+                                <span class="badge bg-danger">{{ p.stock }}</span>
+                            {% elif p.stock <= 50 %}
+                                <span class="badge bg-warning text-dark">{{ p.stock }}</span>
+                            {% else %}
+                                <span class="badge bg-success">{{ p.stock }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">¥{{ "%.2f"|format(p.price) }}</td>
+                        <td class="text-center">
+                            <span class="badge bg-info">{{ p.category or '未分类' }}</span>
+                        </td>
+                        <td class="text-end fw-bold text-primary">
+                            ¥{{ "%.2f"|format(p.stock * p.price) }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                            {% if keyword %}没有找到匹配的商品{% else %}暂无商品数据{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if products %}
+                <tfoot class="table-light">
+                    <tr>
+                        <td colspan="6" class="text-end fw-bold">合计：</td>
+                        <td class="text-end fw-bold text-danger">
+                            ¥{{ "%.2f"|format(products|sum(attribute='stock') * 0 if not products else products|sum(attribute='price')) }}
+                        </td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- 出库记录查询 -->
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-receipt me-2"></i>出库记录明细
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th class="text-center">出库单号</th>
+                        <th class="text-center">出库日期</th>
+                        <th class="text-center">商品编号</th>
+                        <th>商品名称</th>
+                        <th class="text-center">出库数量</th>
+                        <th class="text-end">单价(元)</th>
+                        <th class="text-end">出库金额(元)</th>
+                        <th class="text-center">领用人员</th>
+                        <th>备注</th>
+                        <th class="text-center">创建时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td class="text-center">
+                            <span class="badge bg-secondary">{{ order.order_id }}</span>
+                        </td>
+                        <td class="text-center text-muted">{{ order.out_date }}</td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-dark">{{ order.product_id }}</span>
+                        </td>
+                        <td><strong>{{ order.product_name }}</strong></td>
+                        <td class="text-center">
+                            <span class="badge bg-danger">-{{ order.quantity }}</span>
+                        </td>
+                        <td class="text-end">¥{{ "%.2f"|format(order.unit_price) }}</td>
+                        <td class="text-end fw-bold text-danger">¥{{ "%.2f"|format(order.total_price) }}</td>
+                        <td class="text-center">{{ order.receiver }}</td>
+                        <td class="text-muted small">{{ order.remark or '-' }}</td>
+                        <td class="text-center text-muted small">{{ order.create_time }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                            {% if keyword %}没有找到匹配的记录{% else %}暂无出库记录{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 页面加载后的额外处理
+    document.addEventListener('DOMContentLoaded', function() {
+        // 可以在这里添加更多交互
+    });
+</script>
+{% endblock %}
