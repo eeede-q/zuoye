@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "web_inventory"
+version = "1.0.0"
+description = "商品出库管理系统"
+requires-python = ">=3.8"
+dependencies = [
+    "Flask>=2.0.0",
+]
+
+[project.scripts]
+web_inventory = "web_inventory.app:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
